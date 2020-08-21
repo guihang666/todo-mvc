@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>JQ</title>
+    <link rel="stylesheet" href="css/normalize.8.css">
+    <link rel="stylesheet" href="css/index.css">
+    <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+</head>
+
+<body>
+<div id="todos">
+    <h1>todos</h1>
+    <div id="app">
+        <div class="title">
+            <div class="checkbox"></div>
+            <input class="add" autofocus="autofocus" autocomplete="off" placeholder="What needs to be done?"
+                   class="new-todo">
+        </div>
+        <div class="items"> </div>
+        <div class="footer">
+            <span class="state"></span>
+            <ul class="filters">
+                <li><a href="#/all" class="selected">All</a></li>
+                <li><a href="#/active">Active</a></li>
+                <li><a href="#/completed">Completed</a></li>
+            </ul>
+            <a class="clear-completed">
+                Clear completed
+            </a>
+        </div>
+    </div>
+</div>
+</body>
+<script>
+    let id = 1;
+    let array = [];
+    $(document).ready(() => {
+        users = JSON.parse(localStorage.getItem("array")) || [];
+        idMark = localStorage.getItem("id") || 1;
+
+        init();
+    })
+
+    function query() {
+        // 选择器
+        let $items = $(".items")
+        let $item = $items.find(".item");
+        let $completedItem = $items.find(".item .checkbox.checked");
+        let $activeItem = $items.find(".item .checkbox:not(.checked)");
+
+        let $footer = $(".footer");
+        let $footerState = $footer.find(".state");
+        let $footerRemoveCompled = $footer.find(".clear-completed");
+
+        let $toggleAll = $(".title .checkbox");
+        let $filter = $footer.find(".filters a.selected");
+
+
+        // 总数
+        let total = $item.length;
+        let completed = $completedItem.length;
+        let active = total - completed;
+        let filter = $filter.text();
+
+        
+        if (total === 0) {
+            $items.hide();
+            $footer.hide();
+            $toggleAll.css("opacity", 0)
+        } else {
+            $items.css("display", "block");
+            $footer.css("display", "flex");
+            $toggleAll.css("opacity", 1);
+        }
+        
+        $item.css("display", 'none');
+        switch (filter) {
+            case 'Active':
+                $activeItem.closest(".item").css("display", 'flex');
+                break;
+            case 'Completed':
+                $completedItem.closest(".item").css("display", 'flex');
+                break;
+            default:
+                $item.css("display", 'flex');
+                break;
+        }
+        // 全选
+        if (total === completed) {
+            $toggleAll.addClass("checked");
+        } else {
+            $toggleAll.removeClass("checked");
+        }
+
+        // 更新计数
+        $footerState.text(`${active} item${active > 1 ? 's' : ' '} left`);
+        // 更新删除完成 
+        $footerRemoveCompled.css('opacity', completed > 0 ? 1 : 0)
+    }
+    function initEvents(){
+        $(".title .add").keydown(function (e) {
+            if(e.keyCode == 13){
+                let text = $(this).val().trim();;
+                if(!text)return
+                let $item = $(`<div class="item "></div>`);
+                let $content = $(`<div class="content"></div>`);
+                let $checkbox = $(`<div class="checkbox ">
+                                        <svg viewBox="12 13 29 22" stroke="currentColor" stroke-width="2" fill="none">
+                                            <polyline points="13.2427972 23.7361617 21.8111153 32.3044798 38 16.1155951"></polyline>
+                                        </svg>
+                                    </div>`);
+                let $text = $(`<div class="text "></div>`).text(text);
+                let $remove = $(`<div class="remove">
+                                    <svg viewBox="19 19 22 22" stroke-linecap="round" width="18" height="18"
+                                        stroke="currentColor" stroke-width="2">
+                                        <g transform="translate(21.000000, 21.000000)">
+                                            <path d="M0.333333333,0.333333333 L17.4148373,17.4148373"></path>
+                                            <path d="M0.333333333,0.333333333 L17.4148373,17.4148373"
+                                                transform="translate(9.000000, 9.000000) scale(-1, 1) translate(-9.000000, -9.000000)">
+                                            </path>
+                                        </g>
+                                    </svg>
+                                </div>`);
+                let $edit = $(` <input type="text" class="edit">`).val(text);
+                $content.append($checkbox).append($text).append($remove);
+                $item.append($content).append($edit);
+                $(".items").prepend($item);
+                array.unshift({id, text, toggle: false})
+                $(this).val('');
+                query();
+            }
+        })
+        $(".title .checkbox").click(function (e) {
+            let checked = !$(this).hasClass("checked");
+            if (checked) {
+                $(".item .checkbox:not(checked)").addClass("checked");
+            } else {
+                $(".item .checkbox").removeClass("checked");
+            }
+            query();
+        });
+        $(".items").on("click", ".remove", function (e) {
+            $(this).closest(".item").remove();
+            query();
+        });
+
+        $(".items").on("dblclick", ".text", function (e) {
+            $(this).closest(".item").addClass("editing");
+            let $edit = $(this).closest(".item").find(".edit");
+            let text = $edit.val();
+            $edit.val('').val(text).focus();
+           
+        });
+
+        $(".items").on("keyup focusout", ".item .edit", function (e) {
+            console.info(e)
+            if (e.which === 13 || e.type === 'focusout') {
+                let $edit = $(this);
+                let text = $edit.val();
+                $edit.closest(".item").removeClass("editing").find(".text").text(text);
+                query();
+            }
+            
+        });
+
+        $(".filters a").click(function (e) {
+            e.stopPropagation();
+            e.preventDefault();
+            $(".filters a.selected").removeClass("selected");
+            $(this).addClass("selected");
+            query();
+        })
+
+        $(".clear-completed").click(function (e) {
+            $(".item .checkbox.checked").closest(".item").remove();
+            query();
+        })
+
+        $(".items").on("click", ".item .checkbox", function (e) {
+            $(this).toggleClass("checked");
+            query();
+        });
+    }
+    function init() {
+        initEvents();
+        query();
+    }
+
+    
+</script>
+</html>

@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>java script</title>
+    <link rel="stylesheet" href="css/normalize.8.css">
+    <link rel="stylesheet" href="css/index.css">
+    <!-- <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script> -->
+</head>
+
+<body>
+<div id="todos">
+    <h1>todos</h1>
+    <div id="app">
+        <div class="title">
+            <div class="checkbox "></div>
+            <input class="add" autofocus="autofocus" autocomplete="off" placeholder="What needs to be done?">
+        </div>
+        <div class="items"></div>
+        <div class="footer">
+            <span class="state">20 items left</span>
+            <ul class="filters">
+                <li><a href="#/all" class="selected" onclick="filters(this)">All</a></li>
+                <li><a href="#/active" onclick="filters(this)">Active</a></li>
+                <li><a href="#/completed" onclick="filters(this)">Completed</a></li>
+            </ul>
+            <a class="clear-completed">
+                Clear completed
+            </a>
+        </div>
+    </div>
+</div>
+</body>
+<script>
+    function query() {
+        // 选择器
+        let items = document.querySelector(".items");
+        let item = document.querySelectorAll(".item")
+        let completedItem = document.querySelectorAll(".items .checkbox.checked")
+        let footer =document.querySelector(".footer"); 
+        let footerState = footer.querySelector(".state");
+        let footerRemoveCompled = footer.querySelector(".clear-completed");
+
+        let toggleAll = document.querySelector(".checkbox");
+        let filter = footer.querySelector(".filters a.selected");
+
+        let itemCheckbox = document.querySelectorAll(".item .checkbox");
+        // 总数
+        let total = item.length;
+        let completed = completedItem.length;
+        let active = total - completed;
+        let filterValue = filter.innerText;
+
+        
+        if (total === 0) {
+            items.style.display="none";
+            footer.style.display="none";
+            toggleAll.style.opacity="0";
+        } else {
+            items.style.display="block";
+            footer.style.display="flex";
+            toggleAll.style.opacity="1";
+            for(let i =0;i<total;i++){
+                item[i].setAttribute('style', 'opacity:1')
+            }
+        }
+        
+        for(let i =0;i<total;i++){
+            item[i].setAttribute('style', 'display:none')
+        }
+        switch (filterValue) {
+            case 'Active':
+                for(let i =0;i<itemCheckbox.length;i++){
+                    if(itemCheckbox[i].className.indexOf('checked')===-1){
+                        itemCheckbox[i].parentElement.parentElement.style.display="flex"
+                    }
+                }
+                break;
+            case 'Completed':
+                for(let i =0;i<completedItem.length;i++){
+                    completedItem[i].parentElement.parentElement.style.display="flex"
+                }
+                break;
+            default:
+                for(let i =0;i<total;i++){
+                    item[i].setAttribute('style', 'display:flex')
+                }
+                break;
+        }
+        // 全选
+        if (total === completed) {
+            toggleAll.classList.add('checked')
+        } else {
+            toggleAll.classList.remove("checked")
+        }
+
+        // 更新计数
+        footerState.innerHTML=(`${active} item${active > 1 ? 's' : ' '} left`);
+        // 更新删除完成 
+        footerRemoveCompled.style.opacity=(completed > 0 ? "1" : "0")
+    }
+
+
+    function initEvents(){
+        let add = document.querySelector(".title .add")
+        let items = document.querySelector(".items")
+        let toggle = document.querySelector(".checkbox");
+        //添加
+        add.onkeydown = function (){
+            if(event.keyCode == 13){
+                var add_div = document.createElement('div'); 
+                let textValue = this.value.trim();
+                if(!textValue)return
+                let item = (`<div class="item">
+                                <div class="content">
+                                    <div class="checkbox " onclick="toggle(this)">
+                                        <svg viewBox="12 13 29 22" stroke="currentColor" stroke-width="2" fill="none">
+                                            <polyline points="13.2427972 23.7361617 21.8111153 32.3044798 38 16.1155951"></polyline>
+                                        </svg>
+                                    </div>
+                                    <div class="text" ondblclick="update(this)">${textValue}</div>
+                                    <div class="remove" onclick="deletetask(this)">
+                                        <svg viewBox="19 19 22 22" stroke-linecap="round" width="18" height="18"
+                                            stroke="currentColor" stroke-width="2">
+                                            <g transform="translate(21.000000, 21.000000)">
+                                                <path d="M0.333333333,0.333333333 L17.4148373,17.4148373"></path>
+                                                <path d="M0.333333333,0.333333333 L17.4148373,17.4148373"
+                                                    transform="translate(9.000000, 9.000000) scale(-1, 1) translate(-9.000000, -9.000000)">
+                                                </path>
+                                            </g>
+                                        </svg>
+                                    </div>
+                                </div>
+                                <input type="text" class="edit" onblur="edit(this)">
+                            </div>`);
+                add_div.innerHTML =item;
+                items.appendChild(add_div);
+                (this).value ="";
+                query();            
+            }
+        }
+
+        // 选择/取消
+        toggle.onclick=function () {
+            let checked = this.className.indexOf('checked') == -1
+            let notChecked =document.querySelectorAll(".items .checkbox")
+            if (checked) {
+                for(let i =0;i<notChecked.length;i++){
+                    notChecked[i].classList.add("checked")
+                }
+            } else {
+                for(let i =0;i<notChecked.length;i++){
+                    notChecked[i].classList.remove("checked");
+                }
+            }
+            query();
+        };
+        //删除全部
+        let footerRemoveCompled = document.querySelector(".clear-completed");
+        footerRemoveCompled.onclick= function (e) {
+            let items = document.querySelector(".items");
+            let undone = document.querySelectorAll(".item .checked");
+            for(let i=0;i<undone.length;i++){
+                items.removeChild(undone[i].parentElement.parentElement.parentElement)
+            }
+            query();
+        };
+        
+    }
+
+    function deletetask(el) {
+        el.parentNode.parentNode.parentNode.removeChild(el.parentNode.parentNode);
+        query();
+    }
+
+    function toggle(obj){
+        if (obj.className.indexOf('checked') === -1) {
+            obj.classList.add('checked')
+        } else {
+            obj.classList.remove("checked")
+        }
+        query();
+    }
+      
+
+    function update(obj) {
+        obj.parentNode.parentNode.classList.add("editing")
+        let item = document.querySelector(".editing")
+        let text= item.querySelector(".text")
+        let edit= item.querySelector(".edit")
+        let value = text.innerHTML;
+        edit.value = value
+        edit.focus()
+    }
+
+    function edit(obj){
+        let item = document.querySelector(".editing")
+        let text= item.querySelector(".text")
+        let edit= item.querySelector(".edit")
+        let value = edit.value;
+        text.innerHTML = value
+        item.classList.remove("editing")
+    }
+
+     //过滤器
+    function filters(obj) {
+        let select = document.querySelector(".filters a.selected")
+        event.stopPropagation();
+        event.preventDefault();
+        select.classList.remove("selected");
+        obj.classList.add("selected")
+        query();
+    }
+
+    function init() {
+        initEvents();
+        query();
+    }
+
+    init();
+</script>
+</html>

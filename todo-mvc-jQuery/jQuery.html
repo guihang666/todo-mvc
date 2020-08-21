@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>JQ</title>
+    <link rel="stylesheet" href="css/normalize.8.css">
+    <link rel="stylesheet" href="css/index.css">
+    <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+</head>
+
+<body>
+<div id="todos">
+    <h1>todos</h1>
+    <div id="app">
+        <div class="title">
+            <div class="checkbox"></div>
+            <input class="add" autofocus="autofocus" autocomplete="off" placeholder="What needs to be done?"
+                   class="new-todo">
+        </div>
+        <div class="items"> </div>
+        <div class="footer">
+            <span class="state"></span>
+            <ul class="filters">
+                <li><a href="#/all" class="selected">All</a></li>
+                <li><a href="#/active">Active</a></li>
+                <li><a href="#/completed">Completed</a></li>
+            </ul>
+            <a class="clear-completed">
+                Clear completed
+            </a>
+        </div>
+    </div>
+</div>
+</body>
+<script>
+    let id = 1;
+    let array = [];
+    let editIndex = -1;
+    let updateVal = "";
+    $(document).ready(() => {
+        array = JSON.parse(localStorage.getItem("array")) || [];
+        console.info(array)
+        id = localStorage.getItem("id") || 1;
+        init();
+    })
+
+
+    function query() {
+        rendering();
+       
+        // 选择器
+        let $items = $(".items")
+        let $item = $items.find(".item");
+        let $completedItem = $items.find(".item .checkbox.checked");
+        let $activeItem = $items.find(".item .checkbox:not(.checked)");
+
+        let $footer = $(".footer");
+        let $footerState = $footer.find(".state");
+        let $footerRemoveCompled = $footer.find(".clear-completed");
+
+        let $toggleAll = $(".title .checkbox");
+        let $filter = $footer.find(".filters a.selected");
+
+
+        // 总数
+        let total = $item.length;
+        let completed = $completedItem.length;
+        let active = total - completed;
+        let filter = $filter.text();
+
+        
+        if (total === 0) {
+            $items.hide();
+            $footer.hide();
+            $toggleAll.css("opacity", 0)
+        } else {
+            $items.css("display", "block");
+            $footer.css("display", "flex");
+            $toggleAll.css("opacity", 1);
+        }
+        
+        $item.css("display", 'none');
+        switch (filter) {
+            case 'Active':
+                $activeItem.closest(".item").css("display", 'flex');
+                break;
+            case 'Completed':
+                $completedItem.closest(".item").css("display", 'flex');
+                break;
+            default:
+                $item.css("display", 'flex');
+                break;
+        }
+        // 全选
+        if (total === completed) {
+            $toggleAll.addClass("checked");
+        } else {
+            $toggleAll.removeClass("checked");
+        }
+
+        // 更新计数
+        $footerState.text(`${active} item${active > 1 ? 's' : ' '} left`);
+        // 更新删除完成 
+        $footerRemoveCompled.css('opacity', completed > 0 ? 1 : 0)
+
+    }
+
+    function rendering(){
+        $(".items").empty();
+        for(let item of array) {
+            let checkboxDom = `
+                <div class="${item.toggle ? "checkbox checked":"checkbox"}" data-id="${item.id}">
+                    <svg viewBox="12 13 29 22" stroke="currentColor" stroke-width="2"
+                            fill="none">
+                        <polyline points="13.2427972 23.7361617 21.8111153 32.3044798 38 16.1155951"></polyline>
+                    </svg>
+                </div>
+            `
+            let textDom = `
+                <div class="text" data-id=${item.id}>${item.text}</div>
+            `;
+
+            let removeDom = `
+                <div class="remove" data-id="${item.id}">
+                    <svg viewBox="19 19 22 22" stroke-linecap="round" width="18" height="18"
+                            stroke="currentColor" stroke-width="2">
+                        <g transform="translate(21.000000, 21.000000)">
+                            <path d="M0.333333333,0.333333333 L17.4148373,17.4148373"></path>
+                            <path d="M0.333333333,0.333333333 L17.4148373,17.4148373"
+                                    transform="translate(9.000000, 9.000000) scale(-1, 1) translate(-9.000000, -9.000000)"></path>
+                        </g>
+                    </svg>
+                </div>
+            `;
+
+            let contentDom = `
+                <div class="content">
+                    ${checkboxDom}${textDom}${removeDom}
+                </div>
+            `;    
+
+            let editDom = `
+                <input type="text" class="edit" value="${item.content}">
+            `
+            let itemDom = `
+                <div class="${item.id == editIndex ? "item editing": "item"}">
+                    ${contentDom}${editDom}
+                </div>
+            `;
+
+            $(".items").prepend(itemDom);
+
+            
+        }
+    }
+
+    function initEvents(){
+        $(".title .add").keydown(function (e) {
+            if(e.keyCode == 13){
+                
+                let text = $(this).val().trim();
+                if(!text)return
+
+                let id = returnId(this.id++)
+                array.push({id, text, toggle: false});
+                localStorage.setItem("array", JSON.stringify(array));
+                localStorage.setItem("id", id);
+                $(this).val('');
+                query();
+            }
+        })
+
+        $(".title .checkbox").click(function (e) {
+            let checked = !$(this).hasClass("checked");
+            if (checked) {
+               array.forEach(el => el.toggle = true)
+            } else {
+                array.forEach(el => el.toggle = false)
+            }
+            localStorage.setItem("array", JSON.stringify(array));
+            localStorage.setItem("id", id);
+            query()
+        });
+        
+        $(".items").on("click", ".remove", function (e) {
+            let id = $(this).data("id");
+            array = array.filter(item => item.id != id);
+            localStorage.setItem("array", JSON.stringify(array));
+            localStorage.setItem("id", id);
+            query();
+        });
+
+        $(".items").on("dblclick", ".text", function (e) {
+            updateVal = $(this)[0].textContent
+            $(this)[0].focus();
+            editIndex = $(this).data("id");
+            let item = array.filter(user => user.id == editIndex)[0];
+            item.content = updateVal;
+            query()
+            let inputDom = $(".editing").find(".edit");
+            let val = inputDom.val();
+            inputDom.val("").focus();
+            inputDom.val(val);
+           
+            //.focus();
+        });
+
+        $(".items").on("keyup focusout", ".item .edit",  function(e) {
+            if (e.which === 13 || e.type === 'focusout') {
+                if (!updateVal) return;
+                let index = array.findIndex(user => user.id == editIndex); 
+                array.splice(index, 1)
+                array.push({
+                    id: editIndex,
+                    text:$(this)[0].value, 
+                    toggle: false
+                })
+                editIndex = -1;
+                updateVal ="";
+                localStorage.setItem("array", JSON.stringify(array));
+                localStorage.setItem("id", id);
+                query();
+            }
+        });
+
+        $(".filters a").click(function (e) {
+            e.stopPropagation();
+            e.preventDefault();
+            $(".filters a.selected").removeClass("selected");
+            $(this).addClass("selected");
+            query();
+        })
+
+        $(".clear-completed").click(function (e) {
+            array = array.filter(user => !user.toggle);
+            localStorage.setItem("array", JSON.stringify(array));
+            localStorage.setItem("id", id);
+            query()
+        })
+
+        $(".items").on("click", ".item .checkbox", function (e) {
+            let id = $(this).data("id");
+            let user = array.filter(user => user.id == id)[0];
+            user.toggle = !user.toggle;
+            localStorage.setItem("array", JSON.stringify(array));
+            localStorage.setItem("id", id);
+            query();
+        });
+    }
+
+    function returnId(id){
+        let item = array.find(item => item.id == id)
+        if(item){
+            let newId= id+1;
+            returnId(newId)
+        }else{
+            return id;
+        }
+    }
+
+    function init() {
+        initEvents();
+        query();
+    }
+    
+</script>
+</html>
