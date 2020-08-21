@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Vue</title>
+    <link rel="stylesheet" href="css/normalize.8.css">
+    <link rel="stylesheet" href="css/index.css">
+    <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+</head>
+
+<body>
+        <div id="todos">
+            <h1>todos</h1>
+            <div id="app">
+                <div class="title">
+                    <div @click="checkedAll" class="checkbox" :style="{opacity: setAll}" :class="isChecked"></div>
+                    <input v-model="msg" @keyup.enter="save" class="add new-todo" autofocus="autofocus" autocomplete="off" placeholder="What needs to be done?" >
+                </div>
+                <div class="items">
+                    <div :class="[index== editItem ? 'editing': '']"class="item" v-for="(value,index) in allData" :key="index">
+                        <div class="content">
+                            <div class="checkbox" :class="[value.done ? 'checked': '']" @click="updateState(value.id)">
+                                <svg viewBox="12 13 29 22" stroke="currentColor" stroke-width="2" fill="none">
+                                    <polyline points="13.2427972 23.7361617 21.8111153 32.3044798 38 16.1155951"></polyline>
+                                </svg>
+                            </div>
+                            <div class="text" @dblclick="updateData(index)">{{value.name}}</div>
+                            <div class="remove" @click="remove(value.id)">
+                                <svg viewBox="19 19 22 22" stroke-linecap="round" width="18" height="18"
+                                     stroke="currentColor" stroke-width="2">
+                                    <g transform="translate(21.000000, 21.000000)">
+                                        <path d="M0.333333333,0.333333333 L17.4148373,17.4148373"></path>
+                                        <path d="M0.333333333,0.333333333 L17.4148373,17.4148373"
+                                              transform="translate(9.000000, 9.000000) scale(-1, 1) translate(-9.000000, -9.000000)"></path>
+                                    </g>
+                                </svg>
+                            </div>
+                        </div>
+                        <input  v-focus type="text" class="edit" @keyup.enter="update(index)" @blur="update(index)" v-model="upTodo">
+                    </div>
+                </div>
+                <div class="footer" :style="{display:isHidn}">
+                    <span class="state">{{countDone}}item{{countDone|s}}{{array|e}} left</span>
+                    <ul class="filters">
+                        <li><a href="#/all" :class="{selected: filter == 1}"
+                                @click.prevent.stop="filter = 1">All</a></li>
+                        <li><a href="#/active" :class="{selected: filter == 2}"
+                                @click.prevent.stop="filter = 2 ">Active</a></li>
+                        <li><a href="#/completed" :class="{selected: filter == 3}"
+                                @click.prevent.stop="filter = 3 ">Completed</a></li>
+                    </ul>
+                    <a class="clear-completed" @click="delAll" :style="{opacity: comp}">
+                        Clear completed
+                    </a>
+                </div>
+            </div>
+      
+        <script>
+            
+            new Vue({
+                el:'#app',
+                data:{
+                    msg:'',
+                    upTodo:'',
+                    array:JSON.parse(localStorage.getItem('array')|| '[]'),
+                    editItem:null,
+                    filter: 1 // 1.all 2.active 3.completed
+                },
+                filters: {
+                    "s": function (value) {  // 过滤添加后缀
+                        if (!value || typeof value !== 'number') return "";
+                        if (value > 1) {
+                            return "s";
+                        }
+                        return "";
+                    },
+                    "e":function(value){ 
+                        return value.filter(todo => !todo.done).length == 0 ? 's': ''  
+                    }
+                },
+                methods: {
+                    save:function(){ // 添加
+                        if (!this.msg) return;
+                        let newId = this.returnId(this.array.length) 
+                        this.array.unshift({
+                            id: newId,
+                            name: this.msg,
+                            done: false
+                        })
+                        this.msg = '';
+                    },
+                    remove:function(id){
+                        this.array = this.array.filter(todo => todo.id !== id);
+                    },
+                    delAll:function(){ // 删除选中的
+                        this.array = this.array.filter(todo => !todo.done==true);
+                    },
+                    updateState:function(id){ //修改状态
+                        this.array.filter(todo => todo.id == id).forEach(todo => todo.done = !todo.done);
+                    },
+                    checkedAll:function(){//设置所有
+                        let doneCount = this.array.filter(value => value.done).length;//完成的长度
+                        this.array.forEach(value =>{
+                            value.done =  !(doneCount ===this.array.length);
+                        })
+                    }, 
+                    updateData(index){  // 双击显示修改数据
+                        this.upTodo = this.array[index].name;
+                        this.editItem = index;
+                    },
+                    update(index){
+                        if (!this.editItem&&this.editItem!=0||!this.upTodo) return;
+                       
+                        let item = this.array[index];
+						 this.array.splice(index, 1)
+                        this.array.unshift({
+                            id: item.id,
+                            name: this.upTodo,
+                            done: false
+                        })
+                        this.editItem = null;
+                        this.upTodo ="";
+                    },
+					returnId:function(id){
+						let item =this.array.find(item => item.id == id)
+						if(item){
+							let newId= id+1;
+							this.returnId(newId)
+						}else{
+							return id;
+						}
+					}
+                },
+                directives: {
+                    focus: {
+                        componentUpdated: function (dom) {
+                            dom.focus();
+                        } 
+                    }
+                },
+                computed: {
+                    countDone(){ // 统计已完成的个数
+                        return this.array.filter(todo => !todo.done).length;
+                    },
+                    allData:function(){
+                        return this.array.filter(value => {
+                            if(this.filter == 1) return true;
+                            else if(this.filter == 3) return value.done;
+                            else return !value.done;
+                        })
+                    },
+                    setAll:function(){
+                        return this.array.length > 0 ? 1: 0;
+                    },
+                    isChecked:function(){
+                        return this.array.filter(todo => !todo.done).length == 0 ? 'checked': ''
+                    },
+                    isHidn:function(){
+                        return this.array.length > 0 ? 'flex' : 'none' 
+                    },
+                    comp:function(){
+                        return this.array.filter(todo => todo.done).length > 0 ? 1 : 0
+                    }
+                },
+                watch: {
+                    array:{
+                        handler:function(oldVal,newVal){
+                            console.info(newVal,oldVal,arguments)
+                            localStorage.setItem("array",JSON.stringify(newVal)) 
+                        },
+                        deep:true
+                    },
+                    gets(){
+                        this.array=JSON.parse(localStorage.getItem("array"));
+                    } 
+                }
+            });
+        </script>
+    </body>
+</html>
